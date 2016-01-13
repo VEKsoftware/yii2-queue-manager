@@ -1,0 +1,21 @@
+{
+    "name": "VEKsoftware/yii2-queue-manager",
+    "description": "The module manages the tasks and queues, uses local DB",
+    "type": "yii2-extension",
+    "keywords": ["yii2","extension","queue manager","queue"],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Sergey Okatov",
+            "email": "sokatov@gmail.com"
+        }
+    ],
+    "require": {
+        "yiisoft/yii2": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "queue\\": ""
+        }
+    }
+}
