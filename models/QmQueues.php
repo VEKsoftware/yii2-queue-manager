@@ -3,6 +3,7 @@
 namespace queue\models;
 
 use Yii;
+use queue\QueueManager;
 
 /**
  * This is the model class for table "{{%qm_queues}}".
@@ -59,14 +60,26 @@ class QmQueues extends \yii\db\ActiveRecord
     }
 
     /**
+     * @inherit
+     */
+    public function behaviors()
+    {
+        return [
+            'access'=>[
+                'class' => QueueManager::getInstance()->accessClass,
+            ],
+        ];
+    }
+
+    /**
      * @return \yii\db\ActiveQuery
      */
     public static function findQueues()
     {
-        if(!static::_queues) {
-            static::_queues = static::find()->indexBy('tag')->all();
+        if(!static::$_queues) {
+            static::$_queues = static::find()->indexBy('tag')->all();
         }
-        return static::_queues;
+        return static::$_queues;
     }
 
     /**

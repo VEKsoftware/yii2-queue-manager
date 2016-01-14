@@ -3,11 +3,17 @@
 namespace queue\controllers;
 
 use Yii;
-use queue\models\QmQueues;
+
 use yii\data\ActiveDataProvider;
 use yii\web\Controller;
+
 use yii\web\NotFoundHttpException;
+use yii\web\ForbiddenHttpException;
+
+use yii\filters\AccessControl;
 use yii\filters\VerbFilter;
+
+use queue\models\QmQueues;
 
 /**
  * QueueController implements the CRUD actions for QmQueues model.
@@ -23,6 +29,17 @@ class QueueController extends Controller
                     'delete' => ['post'],
                 ],
             ],
+            'access' => [
+                'class' => AccessControl::className(),
+                'rules' => [
+                    // allow authenticated users
+                    [
+                        'allow' => true,
+                        'roles' => ['@'],
+                    ],
+                    // everything else is denied
+                ],
+            ],
         ];
     }
 
@@ -32,6 +49,8 @@ class QueueController extends Controller
      */
     public function actionIndex()
     {
+        $this->checkAccess('queue.queue.index');
+
         $dataProvider = new ActiveDataProvider([
             'query' => QmQueues::find(),
         ]);
@@ -48,8 +67,11 @@ class QueueController extends Controller
      */
     public function actionView($id)
     {
+        $model = $this->findModel($id);
+        $this->checkAccess('queue.queue.view', $model);
+
         return $this->render('view', [
-            'model' => $this->findModel($id),
+            'model' => $model,
         ]);
     }
 
@@ -61,6 +83,7 @@ class QueueController extends Controller
     public function actionCreate()
     {
         $model = new QmQueues();
+        $this->checkAccess('queue.queue.create', $model);
 
         if ($model->load(Yii::$app->request->post()) && $model->save()) {
             return $this->redirect(['view', 'id' => $model->id]);
@@ -80,6 +103,7 @@ class QueueController extends Controller
     public function actionUpdate($id)
     {
         $model = $this->findModel($id);
+        $this->checkAccess('queue.queue.update',$model);
 
         if ($model->load(Yii::$app->request->post()) && $model->save()) {
             return $this->redirect(['view', 'id' => $model->id]);
@@ -98,7 +122,10 @@ class QueueController extends Controller
      */
     public function actionDelete($id)
     {
-        $this->findModel($id)->delete();
+        $model = $this->findModel($id);
+        $this->checkAccess('queue.queue.delete',$model);
+
+        $model->delete();
 
         return $this->redirect(['index']);
     }
@@ -116,6 +143,21 @@ class QueueController extends Controller
             return $model;
         } else {
             throw new NotFoundHttpException('The requested page does not exist.');
+        }
+    }
+
+    /**
+     * check access rights for current user
+     */
+    protected function checkAccess( $rightName, $access = null )
+    {
+        if( is_null($access) ) {
+            $class = \queue\QueueManager::getInstance()->accessClass;
+            $access = new $class;
+        }
+
+        if( !$access->isAllowed($rightName)) {
+            throw new ForbiddenHttpException( Yii::t('wallets','Access restricted') );
         }
     }
 }
