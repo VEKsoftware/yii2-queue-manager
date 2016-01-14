@@ -71,4 +71,26 @@ class QmTasks extends \yii\db\ActiveRecord
     {
         return Yii::$app->runAction($this->route, $this->params);
     }
+
+    /**
+     * @inheritdoc
+     */
+    public function afterFind()
+    {
+        parent::afterFind();
+        if($this->params) {
+            $this->params = unserialize($this->params);
+        }
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function beforeSave($insert)
+    {
+        if(is_array($this->params)) {
+            $this->params = serialize($this->params);
+        }
+        return parent::beforeSave($insert);
+    }
 }

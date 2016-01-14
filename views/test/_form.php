@@ -13,7 +13,10 @@ use yii\widgets\ActiveForm;
     <?php $form = ActiveForm::begin(); ?>
 
     <div class="form-group">
-        <?= Html::submitButton($model->isNewRecord ? Yii::t('queue', 'Create') : Yii::t('queue', 'Update'), ['class' => $model->isNewRecord ? 'btn btn-success' : 'btn btn-primary']) ?>
+        <?= Html::submitButton(Yii::t('queue', 'Create'), [
+            'class' => 'btn btn-success',
+            'name' => 'done',
+        ]) ?>
     </div>
 
     <?php ActiveForm::end(); ?>

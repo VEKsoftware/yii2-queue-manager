@@ -80,10 +80,12 @@ class TestController extends Controller
      */
     public function actionCreate()
     {
-        $id = Yii::$app->queue['payments']->add('/queue/cons/handler');
+        $id = Yii::$app->queue->queues['payments']->add('/queue/cons/handler');
 
-        if ($model->load(Yii::$app->request->post()) && $model->save()) {
-            return $this->redirect(['view', 'id' => $model->id]);
+//        var_dump($_POST);
+//        var_dump(Yii::$app->request->post('done'));die();
+        if (Yii::$app->request->post('done', NULL) !== NULL) {
+            return $this->redirect(['view', 'id' => $id]);
         } else {
             return $this->render('create', [
             ]);
