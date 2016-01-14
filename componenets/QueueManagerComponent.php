@@ -11,6 +11,6 @@ class QueueManagerComponent extends Component
 {
     public function getQueues()
     {
-        return QmQueues::findQueues()->indexBy('tag');
+        return QmQueues::findQueues();
     }
 }

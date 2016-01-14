@@ -18,6 +18,7 @@ use Yii;
  */
 class QmQueues extends \yii\db\ActiveRecord
 {
+    private static $_queues;
     /**
      * @inheritdoc
      */
@@ -62,7 +63,10 @@ class QmQueues extends \yii\db\ActiveRecord
      */
     public static function findQueues()
     {
-        return static::find();
+        if(!static::_queues) {
+            static::_queues = static::find()->indexBy('tag')->all();
+        }
+        return static::_queues;
     }
 
     /**

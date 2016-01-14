@@ -9,6 +9,8 @@ use yii\console\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
 
+use queue\models\QmQueue;
+
 /**
  * QueueController implements the CRUD actions for QmQueues model.
  */
@@ -20,13 +22,13 @@ class QueueController extends Controller
      */
     public function actionHandle
     {
-        $dataProvider = new ActiveDataProvider([
-            'query' => QmQueues::find(),
-        ]);
+        $queues = QmQueue::findQueues();
 
-        return $this->render('index', [
-            'dataProvider' => $dataProvider,
-        ]);
+        foreach($queues as $tag => $queue) {
+            $queue->handleShot();
+        }
+
+        return true;
     }
 
 }

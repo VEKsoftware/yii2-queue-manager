@@ -63,4 +63,12 @@ class QmTasks extends \yii\db\ActiveRecord
     {
         return $this->hasOne(QmQueues::className(), ['id' => 'queue_id']);
     }
+
+    /**
+     * Hendler for task
+     */
+    public function handle()
+    {
+        return Yii::$app->runAction($this->route, $this->params);
+    }
 }
