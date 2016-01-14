@@ -115,7 +115,7 @@ class QmQueues extends \yii\db\ActiveRecord
     public function add($route,$params = [],$extra = [])
     {
         $task = new QmTask(['route' => $route, 'params' => $params, 'queue_id' => $this->id] + $extra);
-        return $task->save();
+        return $task->save() ? $task->id : NULL;
     }
 
     /**
