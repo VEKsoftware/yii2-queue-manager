@@ -15,6 +15,8 @@ use queue\models\QmQueues;
  */
 class QueueController extends Controller
 {
+    public $defaultAction = 'handle';
+
     /**
      * Handler for all queued events
      * @return mixed
