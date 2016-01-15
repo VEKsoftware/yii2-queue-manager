@@ -25,6 +25,7 @@ $this->params['breadcrumbs'][] = $this->title;
             'id',
             'tag',
             'name',
+            'tasks_per_shot',
             'description',
             'scheduler',
             // 'options',

@@ -1,6 +1,6 @@
 <?php
 
-namespace queue\controllers;
+namespace queue\commands;
 
 use Yii;
 
@@ -10,11 +10,15 @@ use queue\models\QmQueues;
 use queue\models\QmTasks;
 
 /**
- * QueueController implements the CRUD actions for QmQueues model.
+ * TestController for QueueManager
  */
 class ConsController extends Controller
 {
-    public function actionHandler($id)
+
+    /**
+     * Test Handler for QueueManager
+     */
+    public function actionHandler()
     {
         echo "I do something here";
         return true;

@@ -16,6 +16,8 @@ use yii\widgets\ActiveForm;
 
     <?= $form->field($model, 'name')->textInput(['maxlength' => true]) ?>
 
+    <?= $form->field($model, 'tasks_per_shot')->textInput(['type' => 'number']) ?>
+
     <?= $form->field($model, 'description')->textInput() ?>
 
     <?= $form->field($model, 'scheduler')->textInput(['maxlength' => true]) ?>

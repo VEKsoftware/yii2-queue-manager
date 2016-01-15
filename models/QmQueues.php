@@ -40,6 +40,7 @@ class QmQueues extends \yii\db\ActiveRecord
             [['name'], 'string', 'max' => 256],
             [['scheduler'], 'string', 'max' => 50],
             [['name'], 'unique'],
+            [['tasks_per_shot'], 'integer'],
             [['tag'], 'unique']
         ];
     }
@@ -56,6 +57,7 @@ class QmQueues extends \yii\db\ActiveRecord
             'description' => Yii::t('queue', 'Description'),
             'scheduler' => Yii::t('queue', 'Scheduler'),
             'options' => Yii::t('queue', 'Options'),
+            'tasks_per_shot' => Yii::t('queue', 'Tasks Per Shot'),
         ];
     }
 
@@ -93,12 +95,13 @@ class QmQueues extends \yii\db\ActiveRecord
     /**
      * @return \yii\db\ActiveQuery
      */
-    public function getQmScheduledTasks($number)
+    public function getQmScheduledTasks()
     {
         $now = (new \DateTime())->format('Y-m-d H:i:sP');
+
         return $this->getQmTasks()
-            ->where(['>','time_start',$now])
-            ->orderBy(['priority','id'])
+            ->where(['or',['<','[[time_start]]',$now],['[[time_start]]' => NULL]])
+            ->orderBy(['[[priority]]' => SORT_ASC,'[[id]]' => SORT_ASC])
             ->limit($this->tasks_per_shot)
             ->all();
     }
@@ -129,9 +132,11 @@ class QmQueues extends \yii\db\ActiveRecord
     public function handleShot()
     {
         $tasks = $this->getQmScheduledTasks();
+//        var_dump($tasks);
+//        die();
 
         foreach($tasks as $task) {
-            if($task->handle) {
+            if($task->handle()) {
                 $task->delete();
             }
         }
