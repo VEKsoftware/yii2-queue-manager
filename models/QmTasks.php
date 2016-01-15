@@ -36,7 +36,7 @@ class QmTasks extends \yii\db\ActiveRecord
         return [
 //            [['time_start'], 'date','timestampAttribute' => 'timestamp_start'],
             [['priority', 'queue_id'], 'integer'],
-            [['route', 'params'], 'string']
+            [['route', 'params'], 'safe']
         ];
     }
 
