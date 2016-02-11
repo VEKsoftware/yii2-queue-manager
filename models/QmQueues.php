@@ -41,7 +41,8 @@ class QmQueues extends \yii\db\ActiveRecord
             [['scheduler'], 'string', 'max' => 50],
             [['name'], 'unique'],
             [['tasks_per_shot'], 'integer'],
-            [['tag'], 'unique']
+            [['tag'], 'unique'],
+            [['pid'], 'integer'],
         ];
     }
 
@@ -58,6 +59,7 @@ class QmQueues extends \yii\db\ActiveRecord
             'scheduler' => Yii::t('queue', 'Scheduler'),
             'options' => Yii::t('queue', 'Options'),
             'tasks_per_shot' => Yii::t('queue', 'Tasks Per Shot'),
+            'pid' => Yii::t('queue', 'Process ID')
         ];
     }
 
@@ -131,14 +133,68 @@ class QmQueues extends \yii\db\ActiveRecord
      */
     public function handleShot()
     {
+        $this->checkProcessExists();
+        
         $tasks = $this->getQmScheduledTasks();
-//        var_dump($tasks);
-//        die();
-
+        
         foreach($tasks as $task) {
             if($task->handle()) {
                 $task->delete();
             }
         }
     }
+    
+    /**
+     * PID check
+     * if process is exists then exit()
+     * 
+     * @return boolean
+     */
+    private function checkProcessExists()
+    {
+        $pid = posix_getpid();
+        
+        if( is_null($this->pid) ) {
+            $this->pid = $pid;
+            return $this->save();
+        } else {
+            if( $this->pid == $pid ) return true;
+            if( !posix_kill( $this->pid, 0 ) ) {
+                $this->pid = $pid;
+                return $this->save();
+            }
+        }
+        
+        exit();
+    }
+    
+    /**
+     * PID INFO
+     */
+    /*
+    private function takePidInfo( $pid, $ps_opt="aux" )
+    {
+        $ps = shell_exec("ps ".$ps_opt."p ".$pid);
+        $ps = explode("\n", $ps);
+
+        if(count($ps)<2) {
+            trigger_error("PID ".$pid." doesn't exists", E_USER_WARNING);
+            return false;
+        }
+
+        foreach($ps as $key => $val) {
+           $ps[$key]=explode(" ", ereg_replace(" +", " ", trim($ps[$key])));
+        }
+
+        foreach($ps[0] as $key => $val) {
+            $pidinfo[$val] = $ps[1][$key];
+            unset($ps[1][$key]);
+        }
+
+        if(is_array($ps[1])) {
+            $pidinfo[$val].=" ".implode(" ", $ps[1]);
+        } 
+        return $pidinfo;
+    }
+    */
 }

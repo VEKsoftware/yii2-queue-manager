@@ -24,11 +24,14 @@ class QueueController extends Controller
     public function actionHandle()
     {
         $queues = QmQueues::findQueues();
-
-        foreach($queues as $tag => $queue) {
-            $queue->handleShot();
-        }
-
+        
+        do {
+            foreach($queues as $tag => $queue) {
+                $queue->handleShot();
+            }
+            sleep(5);
+        } while( true );
+        
         return true;
     }
 
