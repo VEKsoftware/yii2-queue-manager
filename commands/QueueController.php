@@ -22,54 +22,43 @@ class QueueController extends Controller
      * Handler for all queued events
      * @return mixed
      */
-    public function actionHandle()
+    public function actionHandle( $id = null )
     {
-        $queues = QmQueues::findQueues();
-        
-        $command = QueueManager::getInstance()->systemHandleQueue;
-        
-        foreach($queues as $tag => $queue) {
+        if( is_null($id) ) {
             
-            if( is_null( $queue->pid ) || !posix_kill( $queue->pid, 0 ) ) {
+            $queues = QmQueues::findQueues();
+            foreach($queues as $tag => $queue) {
                 
-                shell_exec( 'nice -n 19 '.$command.' '.strval( $queue->id ).' > /dev/null 2>&1 &' );
+                if( is_null( $queue->pid ) || !posix_kill( $queue->pid, 0 ) ) {
+                    
+                    $command = Yii::$app->request->scriptFile . ' queue/queue/handle';
+                    shell_exec( 'nice -n 19 '.$command.' '.strval( $queue->id ).' > /dev/null 2>&1 &' );
+                    
+                }
+            }
+            
+        } else {
+            
+            $queue = QmQueues::findOne(['id' => $id]);
+            if( empty($queue) ) return false;
+            
+            if( is_null($queue->pid) || !posix_kill( $queue->pid, 0 ) ) {
+                
+                $queue->pid = posix_getpid();
+                if( $queue->save() ) {
+                    
+                    $queue->handleShot();
+                    
+                    // $queue->pid = null;
+                    // $queue->save()
+                    
+                }
                 
             }
+            
         }
         
         return true;
-    }
-    
-    /**
-     * Handler for one queue
-     * @return void
-     */
-    public function actionHandleQueue( $id )
-    {
-        $queue = QmQueues::findOne(['id' => $id]);
-        if( empty($queue) ) return false;
-        
-        // save process ID or die()
-        
-        if( is_null($queue->pid) || !posix_kill( $queue->pid, 0 ) ) {
-                
-                $pid = posix_getpid();
-                
-                $queue->pid = $pid;
-                $queue->save();
-
-        } else {
-            
-            die();
-            
-        }
-        
-        // cicle of queue handler
-        
-        do {
-            $queue->handleShot();
-            sleep(5);
-        } while( true );
     }
     
     /**

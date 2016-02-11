@@ -9,8 +9,6 @@ class QueueManager extends \yii\base\Module
     public $controllerNamespace = 'queue\controllers';
 
     public $accessClass;
-    
-    public $systemHandleQueue;
 
     /**
      * Number of tasks to be handled at one shot
