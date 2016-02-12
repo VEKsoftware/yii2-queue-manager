@@ -26,16 +26,23 @@ class QueueController extends Controller
     {
         if( is_null($id) ) {
             
-            $queues = QmQueues::findQueues();
-            foreach($queues as $tag => $queue) {
-                
-                if( is_null( $queue->pid ) || !posix_kill( $queue->pid, 0 ) ) {
+            // infinite cicle
+            do {
+            
+                $queues = QmQueues::findQueues();
+                foreach($queues as $tag => $queue) {
                     
-                    $command = Yii::$app->request->scriptFile . ' queue/queue/handle';
-                    shell_exec( 'nice -n 19 '.$command.' '.strval( $queue->id ).' > /dev/null 2>&1 &' );
-                    
+                    if( is_null( $queue->pid ) || !posix_kill( $queue->pid, 0 ) ) {
+                        
+                        $command = Yii::$app->request->scriptFile . ' queue/queue/handle';
+                        shell_exec( 'nice -n 19 '.$command.' '.strval( $queue->id ).' > /dev/null 2>&1 &' );
+                        
+                    }
                 }
-            }
+                
+                sleep( 5 );
+            
+            } while( true );
             
         } else {
             
@@ -49,8 +56,8 @@ class QueueController extends Controller
                     
                     $queue->handleShot();
                     
-                    // $queue->pid = null;
-                    // $queue->save()
+                    $queue->pid = null;
+                    $queue->save()
                     
                 }
                 
