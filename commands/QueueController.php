@@ -57,7 +57,7 @@ class QueueController extends Controller
                     $queue->handleShot();
                     
                     $queue->pid = null;
-                    $queue->save()
+                    $queue->save();
                     
                 }
                 
