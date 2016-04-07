@@ -16,7 +16,6 @@ use queue\models\QmQueues;
  */
 class QueueController extends Controller
 {
-    const LOCK_FILE = "/var/run/vek-queue-manager.lock";
 
     public $defaultAction = 'handle';
 
@@ -27,15 +26,17 @@ class QueueController extends Controller
      */
     protected function isLocked()
     {
-        if( file_exists( static::LOCK_FILE ) ) {
-            $lockingPID = trim( file_get_contents( static::LOCK_FILE ) );
+        $lock_file = Yii::getAlias('@root').'/runtime/queue-manager.lock';
+
+        if( file_exists( $lock_file ) ) {
+            $lockingPID = trim( file_get_contents($lock_file) );
             if(posix_kill($lockingPID, 0)) return true;
 
             // Lock-file is stale, so kill it.  Then move on to re-creating it.
-            unlink( static::LOCK_FILE );
+            unlink($lock_file);
         }
 
-        file_put_contents( static::LOCK_FILE, getmypid() . "\n" );
+        file_put_contents($lock_file, getmypid() . "\n" );
         return false;
     }
 
