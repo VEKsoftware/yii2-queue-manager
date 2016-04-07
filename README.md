@@ -30,7 +30,7 @@ Usage
 
 To setup the module you need to go though several steps.
 
-1. Configure the console application of your yii2 installation:
+Configure the console application of your yii2 installation:
 
 ```php
 ...
@@ -44,7 +44,6 @@ To setup the module you need to go though several steps.
     ],
 ...
 ```
-
 The Access class must be like this:
 ```php
 <?php
@@ -93,7 +92,7 @@ class Access extends Behavior
 }
 ```
 
-2. Configure your project:
+Configure your project:
 
 ```php
 <?php
@@ -118,7 +117,8 @@ class Access extends Behavior
 
 ```
 
-3. Create tables in your database:
+Create tables in your database:
+
 ```sql
 CREATE TABLE qm_queues (
     id integer NOT NULL,
@@ -178,7 +178,8 @@ ALTER TABLE ONLY qm_tasks
 
 ```
 
-4. Add your handler to console\controllers:
+Add your handler to console\controllers:
+
 ```php
 <?php
 
@@ -207,9 +208,10 @@ class ConsController extends Controller
 
 ```
 
-5. Go to http://your.project/queue/queue/index and create the desired queues
+Go to http://your.project/queue/queue/index and create the desired queues
 
-6. Use queue component in your project to add new tasks to the queues:
+Use queue component in your project to add new tasks to the queues:
+
 ```php
 <?php
     Yii::$app->queue->queues['my_queue_name']->add('/cons/handler',['Test message']);
