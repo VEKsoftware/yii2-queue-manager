@@ -30,7 +30,7 @@ Usage
 
 To setup the module you need to go though several steps.
 
-Configure the console application of your yii2 installation:
+#### Configure the console application of your yii2 installation:
 
 ```php
 ...
@@ -92,7 +92,7 @@ class Access extends Behavior
 }
 ```
 
-Configure your project:
+#### Configure your project:
 
 ```php
 <?php
@@ -117,7 +117,7 @@ Configure your project:
 
 ```
 
-Create tables in your database:
+#### Create tables in your database:
 
 ```sql
 CREATE TABLE qm_queues (
@@ -178,7 +178,7 @@ ALTER TABLE ONLY qm_tasks
 
 ```
 
-Add your handler to console\controllers:
+#### Add your handler to console\controllers:
 
 ```php
 <?php
@@ -208,9 +208,13 @@ class ConsController extends Controller
 
 ```
 
+#### Setup your queues
+
 Go to http://your.project/queue/queue/index and create the desired queues
 
-Setup your CRON to start queue manager periodically. For that type in your shell:
+#### Setup your CRON to start queue manager periodically.
+
+For that type in your shell:
 ```bash
 sudo crontab -u www-data -e
 ```
@@ -220,7 +224,7 @@ SHELL=/bin/bash
 */15 * * * * cd project/directory; nohup ./yii queue/queue/handler >> runtime/cron.log &
 ```
 
-Use queue component in your project to add new tasks to the queues:
+#### Use queue component in your project to add new tasks to the queues:
 
 ```php
 <?php
