@@ -210,6 +210,16 @@ class ConsController extends Controller
 
 Go to http://your.project/queue/queue/index and create the desired queues
 
+Setup your CRON to start queue manager periodically. For that type in your shell:
+```bash
+sudo crontab -u www-data -e
+```
+and edit the crontab file as:
+```cron
+SHELL=/bin/bash
+*/15 * * * * cd project/directory; nohup ./yii queue/queue/handler >> runtime/cron.log &
+```
+
 Use queue component in your project to add new tasks to the queues:
 
 ```php
