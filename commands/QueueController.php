@@ -16,7 +16,28 @@ use queue\models\QmQueues;
  */
 class QueueController extends Controller
 {
+    const LOCK_FILE = "/var/run/vek-queue-manager.lock";
+
     public $defaultAction = 'handle';
+
+    /**
+     * Check for started instance of current command and create lock-file
+     *
+     * @return bool
+     */
+    protected function isLocked()
+    {
+        if( file_exists( static::LOCK_FILE ) ) {
+            $lockingPID = trim( file_get_contents( static::LOCK_FILE ) );
+            if(posix_kill($lockingPID, 0)) return true;
+
+            // Lock-file is stale, so kill it.  Then move on to re-creating it.
+            unlink( static::LOCK_FILE );
+        }
+
+        file_put_contents( static::LOCK_FILE, getmypid() . "\n" );
+        return false;
+    }
 
     /**
      * Handler for all queued events
@@ -25,7 +46,10 @@ class QueueController extends Controller
     public function actionHandle( $id = null )
     {
         if( is_null($id) ) {
-            
+            // check if the instance of current command has been already started and alive
+            if( $this->isLocked() ) return;
+
+
             // infinite cicle
             do {
             
