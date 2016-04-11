@@ -12,6 +12,8 @@ class QueueManager extends \yii\base\Module
 
     public $accessClass;
 
+    public $lockFile = '@runtime/queue-manager.lock';
+
     /**
      * Number of tasks to be handled at one shot
      */

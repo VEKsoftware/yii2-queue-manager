@@ -26,7 +26,9 @@ class QueueController extends Controller
      */
     protected function isLocked()
     {
-        $lock_file = Yii::getAlias('@root').'/runtime/queue-manager.lock';
+//        $lock_file = Yii::getAlias('@root').'/runtime/queue-manager.lock';
+
+        $lock_file = Yii::getAlias(QueueManager::getInstance()->lockFile);
 
         if( file_exists( $lock_file ) ) {
             $lockingPID = trim( file_get_contents($lock_file) );
