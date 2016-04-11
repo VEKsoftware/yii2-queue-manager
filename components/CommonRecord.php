@@ -1,5 +1,5 @@
 <?php
-namespace statuses\components;
+namespace queue\components;
 
 use Yii;
 use yii\db\ActiveRecord;

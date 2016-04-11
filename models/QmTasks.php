@@ -3,6 +3,7 @@
 namespace queue\models;
 
 use Yii;
+use queue\components\CommonRecord;
 
 /**
  * This is the model class for table "{{%qm_tasks}}".
@@ -17,7 +18,7 @@ use Yii;
  *
  * @property QmQueues $queue
  */
-class QmTasks extends \yii\db\ActiveRecord
+class QmTasks extends CommonRecord
 {
 //    public $timestamp_start;
     /**

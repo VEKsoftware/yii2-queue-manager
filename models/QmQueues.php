@@ -4,6 +4,7 @@ namespace queue\models;
 
 use Yii;
 use queue\QueueManager;
+use queue\components\CommonRecord;
 
 /**
  * This is the model class for table "{{%qm_queues}}".
@@ -17,7 +18,7 @@ use queue\QueueManager;
  *
  * @property QmTasks[] $qmTasks
  */
-class QmQueues extends \yii\db\ActiveRecord
+class QmQueues extends CommonRecord
 {
     private static $_queues;
     /**
