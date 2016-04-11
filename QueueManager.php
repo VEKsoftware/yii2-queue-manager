@@ -8,6 +8,8 @@ class QueueManager extends \yii\base\Module
 {
     public $controllerNamespace = 'queue\controllers';
 
+    public $db = 'db';
+
     public $accessClass;
 
     /**
