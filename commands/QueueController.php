@@ -66,7 +66,7 @@ class QueueController extends Controller
                             $command = Yii::$app->request->scriptFile . ' queue/queue/handle';
                         }
 
-                        shell_exec( 'nice -n 19 '.$command.' '.strval( $queue->id ).' 2>&1 > /dev/null &' );
+                        shell_exec( 'nice -n 19 '.$command.' '.strval( $queue->id ).' 2>&1 &' );
                     }
                 }
                 sleep( 5 );
