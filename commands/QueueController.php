@@ -43,6 +43,23 @@ class QueueController extends Controller
     }
 
     /**
+     * Check if my lock-file is still alive and contains my pid
+     *
+     * @return bool if lock file is valid then true
+     */
+    protected function isLockAlive()
+    {
+        $lock_file = Yii::getAlias(QueueManager::getInstance()->lockFile);
+
+        if( file_exists( $lock_file ) ) {
+            $lockingPID = trim( file_get_contents($lock_file) );
+            if($lockingPID == getmypid()) return true;
+        }
+
+        return false;
+    }
+
+    /**
      * Handler for all queued events
      * @return mixed
      */
@@ -71,7 +88,7 @@ class QueueController extends Controller
                 }
                 sleep( 5 );
 
-            } while( true );
+            } while( $this->isLockAlive() );
 
         } else {
 
