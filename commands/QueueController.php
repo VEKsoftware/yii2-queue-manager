@@ -5,6 +5,7 @@ namespace queue\commands;
 use Yii;
 use yii\data\ActiveDataProvider;
 use yii\console\Controller;
+use yii\helpers\ArrayHelper;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
 
@@ -18,6 +19,25 @@ class QueueController extends Controller
 {
 
     public $defaultAction = 'handle';
+
+    /**
+     * Количество обрабатываемых запросов
+     *
+     * @var int
+     */
+    public $taskPerShoot = null;
+
+    /**
+     * Консольные опции
+     *
+     * @param string $actionID - действие
+     *
+     * @return array
+     */
+    public function options($actionID)
+    {
+        return ArrayHelper::merge(parent::options($actionID), ['taskPerShoot']);
+    }
 
     /**
      * Check for started instance of current command and create lock-file
@@ -98,7 +118,12 @@ class QueueController extends Controller
             if( is_null($queue->pid) || !posix_kill( $queue->pid, 0 ) ) {
 
                 $queue->pid = posix_getpid();
-                if( $queue->save() ) {
+                if ($queue->save()) {
+
+                    /* Устанавливаем альтернативное количество обрабатываемых строк за "выстрел" */
+                    if (!is_null($this->taskPerShoot)) {
+                        $queue->tasks_per_shot = $this->taskPerShoot;
+                    }
 
                     $queue->handleShot();
 
