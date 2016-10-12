@@ -125,6 +125,48 @@ class QmQueues extends CommonRecord
     }
 
     /**
+     * Check for task exists
+     *
+     * @param string $route Route to call for task
+     * @param array $params Parameters to send to the route
+     *
+     * @return boolean Check result
+     */
+    public function checkTaskExists($route, $params)
+    {
+        return $this->getQmTasks()->where([
+            'and',
+            ['route' => $route],
+            ['params' => serialize($params)],
+            ['queue_id' => $this->id]
+        ])->exists();
+    }
+
+    /**
+     * Delete tasks with certain route and params
+     *
+     * @param string $route Route to call for task
+     * @param array $params Parameters to send to the route
+     */
+    public function deleteTask($route, $params)
+    {
+        $tasks = $this->getQmTasks()->where([
+            'and',
+            ['route' => $route],
+            ['params' => serialize($params)],
+            ['queue_id' => $this->id]
+        ])->all();
+
+        if(!empty($tasks)) {
+            foreach($tasks as $task) {
+
+                $task->delete();
+
+            }
+        }
+    }
+
+    /**
      * Add new task into the queue
      *
      * @param string|array $route Route to call for task
