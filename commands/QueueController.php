@@ -3,11 +3,8 @@
 namespace queue\commands;
 
 use Yii;
-use yii\data\ActiveDataProvider;
 use yii\console\Controller;
 use yii\helpers\ArrayHelper;
-use yii\web\NotFoundHttpException;
-use yii\filters\VerbFilter;
 
 use queue\QueueManager;
 use queue\models\QmQueues;
@@ -50,15 +47,18 @@ class QueueController extends Controller
 
         $lock_file = Yii::getAlias(QueueManager::getInstance()->lockFile);
 
-        if( file_exists( $lock_file ) ) {
-            $lockingPID = trim( file_get_contents($lock_file) );
-            if(posix_kill($lockingPID, 0)) return true;
+        if (file_exists($lock_file)) {
+            $lockingPID = trim(file_get_contents($lock_file));
+            if (posix_kill($lockingPID, 0)) {
+                return true;
+            }
 
             // Lock-file is stale, so kill it.  Then move on to re-creating it.
             unlink($lock_file);
         }
 
-        file_put_contents($lock_file, getmypid() . "\n" );
+        file_put_contents($lock_file, getmypid() . "\n");
+
         return false;
     }
 
@@ -71,9 +71,11 @@ class QueueController extends Controller
     {
         $lock_file = Yii::getAlias(QueueManager::getInstance()->lockFile);
 
-        if( file_exists( $lock_file ) ) {
-            $lockingPID = trim( file_get_contents($lock_file) );
-            if($lockingPID == getmypid()) return true;
+        if (file_exists($lock_file)) {
+            $lockingPID = trim(file_get_contents($lock_file));
+            if ($lockingPID == getmypid()) {
+                return true;
+            }
         }
 
         return false;
@@ -83,39 +85,43 @@ class QueueController extends Controller
      * Handler for all queued events
      * @return mixed
      */
-    public function actionHandle( $id = null )
+    public function actionHandle($id = null)
     {
-        if( is_null($id) ) {
+        if (is_null($id)) {
             // check if the instance of current command has been already started and alive
-            if( $this->isLocked() ) return;
+            if ($this->isLocked()) {
+                return;
+            }
 
 
             // infinite cicle
             do {
                 $queues = QmQueues::findQueues();
-                foreach($queues as $tag => $queue) {
+                foreach ($queues as $tag => $queue) {
 
-                    if( is_null( $queue->pid ) || !posix_kill( $queue->pid, 0 ) ) {
+                    if (is_null($queue->pid) || !posix_kill($queue->pid, 0)) {
 
-                        if($queue->scheduler && file_exists(Yii::getAlias($queue->scheduler))) {
+                        if ($queue->scheduler && file_exists(Yii::getAlias($queue->scheduler))) {
                             $command = Yii::getAlias($queue->scheduler) . ' queue/queue/handle';
                         } else {
                             $command = Yii::$app->request->scriptFile . ' queue/queue/handle';
                         }
 
-                        shell_exec( 'nice -n 19 '.$command.' '.strval( $queue->id ).' 2>&1 &' );
+                        shell_exec('nice -n 19 ' . $command . ' ' . strval($queue->id) . ' 2>&1 &');
                     }
                 }
-                sleep( 5 );
+                sleep(5);
 
-            } while( $this->isLockAlive() );
+            } while ($this->isLockAlive());
 
         } else {
 
             $queue = QmQueues::findOne(['id' => $id]);
-            if( empty($queue) ) return false;
+            if (empty($queue)) {
+                return false;
+            }
 
-            if( is_null($queue->pid) || !posix_kill( $queue->pid, 0 ) ) {
+            if (is_null($queue->pid) || !posix_kill($queue->pid, 0)) {
 
                 $queue->pid = posix_getpid();
                 if ($queue->save()) {
@@ -132,6 +138,7 @@ class QueueController extends Controller
                 }
             }
         }
+
         return true;
     }
 
