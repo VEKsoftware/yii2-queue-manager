@@ -40,24 +40,24 @@ class QueueController extends Controller
      * Check for started instance of current command and create lock-file
      *
      * @return bool
+     *
+     * @throws \yii\base\InvalidParamException
      */
     protected function isLocked()
     {
-//        $lock_file = Yii::getAlias('@root').'/runtime/queue-manager.lock';
+        $lockFile = Yii::getAlias(QueueManager::getInstance()->lockFile);
 
-        $lock_file = Yii::getAlias(QueueManager::getInstance()->lockFile);
-
-        if (file_exists($lock_file)) {
-            $lockingPID = trim(file_get_contents($lock_file));
+        if (file_exists($lockFile)) {
+            $lockingPID = trim(file_get_contents($lockFile));
             if (posix_kill($lockingPID, 0)) {
                 return true;
             }
 
             // Lock-file is stale, so kill it.  Then move on to re-creating it.
-            unlink($lock_file);
+            unlink($lockFile);
         }
 
-        file_put_contents($lock_file, getmypid() . "\n");
+        file_put_contents($lockFile, getmypid() . "\n");
 
         return false;
     }
@@ -66,14 +66,16 @@ class QueueController extends Controller
      * Check if my lock-file is still alive and contains my pid
      *
      * @return bool if lock file is valid then true
+     *
+     * @throws \yii\base\InvalidParamException
      */
     protected function isLockAlive()
     {
-        $lock_file = Yii::getAlias(QueueManager::getInstance()->lockFile);
+        $lockFile = Yii::getAlias(QueueManager::getInstance()->lockFile);
 
-        if (file_exists($lock_file)) {
-            $lockingPID = trim(file_get_contents($lock_file));
-            if ($lockingPID == getmypid()) {
+        if (file_exists($lockFile)) {
+            $lockingPID = (int)trim(file_get_contents($lockFile));
+            if ($lockingPID === getmypid()) {
                 return true;
             }
         }
@@ -83,49 +85,51 @@ class QueueController extends Controller
 
     /**
      * Handler for all queued events
+     *
+     * @param null|integer $queueId - id "очереди"
+     *
      * @return mixed
+     *
+     * @throws \yii\base\InvalidParamException
      */
-    public function actionHandle($id = null)
+    public function actionHandle($queueId = null)
     {
-        if (is_null($id)) {
-            // check if the instance of current command has been already started and alive
+        if (is_null($queueId)) {
+            // Check if the instance of current command has been already started and alive
             if ($this->isLocked()) {
                 return;
             }
 
 
-            // infinite cicle
+            // Infinite cicle
             do {
                 $queues = QmQueues::findQueues();
-                foreach ($queues as $tag => $queue) {
-
-                    if (is_null($queue->pid) || !posix_kill($queue->pid, 0)) {
-
+                foreach ($queues as $queue) {
+                    if ($queue->pid === null || !posix_kill($queue->pid, 0)) {
                         if ($queue->scheduler && file_exists(Yii::getAlias($queue->scheduler))) {
                             $command = Yii::getAlias($queue->scheduler) . ' queue/queue/handle';
                         } else {
                             $command = Yii::$app->request->scriptFile . ' queue/queue/handle';
                         }
 
-                        shell_exec('nice -n 19 ' . $command . ' ' . strval($queue->id) . ' 2>&1 &');
+                        shell_exec('nice -n 19 ' . $command . ' ' . (string)$queue->id . ' 2>&1 &');
                     }
                 }
+
                 sleep(5);
 
             } while ($this->isLockAlive());
 
         } else {
-
-            $queue = QmQueues::findOne(['id' => $id]);
-            if (empty($queue)) {
+            /* @var null|QmQueues $queue - очередь */
+            $queue = QmQueues::findOne(['id' => $queueId]);
+            if ($queue === null) {
                 return false;
             }
 
-            if (is_null($queue->pid) || !posix_kill($queue->pid, 0)) {
-
+            if ($queue->pid === null || !posix_kill($queue->pid, 0)) {
                 $queue->pid = posix_getpid();
                 if ($queue->save()) {
-
                     /* Устанавливаем альтернативное количество обрабатываемых строк за "выстрел" */
                     if (!is_null($this->taskPerShoot)) {
                         $queue->tasks_per_shot = $this->taskPerShoot;
