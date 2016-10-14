@@ -8,21 +8,22 @@ use queue\components\CommonRecord;
 /**
  * This is the model class for table "{{%qm_tasks}}".
  *
- * @property integer $id
- * @property string $time_created
- * @property string $time_start
- * @property integer $priority
- * @property integer $queue_id
- * @property string $route
- * @property string $params
+ * @property integer  $id
+ * @property string   $time_created
+ * @property string   $time_start
+ * @property integer  $priority
+ * @property integer  $queue_id
+ * @property string   $route
+ * @property string   $params
  *
  * @property QmQueues $queue
  */
 class QmTasks extends CommonRecord
 {
-//    public $timestamp_start;
     /**
-     * @inheritdoc
+     * {@inheritdoc}
+     *
+     * @return string
      */
     public static function tableName()
     {
@@ -30,7 +31,9 @@ class QmTasks extends CommonRecord
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
+     *
+     * @return array
      */
     public function rules()
     {
@@ -42,7 +45,9 @@ class QmTasks extends CommonRecord
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
+     *
+     * @return array
      */
     public function attributeLabels()
     {
@@ -58,6 +63,8 @@ class QmTasks extends CommonRecord
     }
 
     /**
+     * Relation с очередью
+     *
      * @return \yii\db\ActiveQuery
      */
     public function getQueue()
@@ -66,7 +73,9 @@ class QmTasks extends CommonRecord
     }
 
     /**
-     * Hendler for task
+     * Обработка задачи
+     *
+     * @return int|mixed|\yii\console\Response
      */
     public function handle()
     {
@@ -74,24 +83,31 @@ class QmTasks extends CommonRecord
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
+     *
+     * @return void
      */
     public function afterFind()
     {
         parent::afterFind();
-        if($this->params) {
+        if ($this->params) {
             $this->params = unserialize($this->params);
         }
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
+     *
+     * @param bool $insert - true - вставка, false - обновление
+     *
+     * @return bool
      */
     public function beforeSave($insert)
     {
-        if(is_array($this->params)) {
+        if (is_array($this->params)) {
             $this->params = serialize($this->params);
         }
+
         return parent::beforeSave($insert);
     }
 }
