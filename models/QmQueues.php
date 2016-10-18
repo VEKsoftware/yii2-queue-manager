@@ -175,22 +175,38 @@ class QmQueues extends CommonRecord
      * @param array  $params Parameters to send to the route
      *
      * @return void
+     *
+     * @throws \yii\db\Exception
      */
     public function deleteTask($route, $params)
     {
-        $tasks = $this->getQmTasks()->where([
-            'and',
-            ['route' => $route],
-            ['params' => serialize($params)],
-            ['queue_id' => $this->id]
-        ])->all();
+        /* Получаем задачи */
+        $tasks = $this->getQmTasks()
+            ->where(
+                [
+                    'and',
+                    ['route' => $route],
+                    ['params' => serialize($params)],
+                    ['queue_id' => $this->id]
+                ]
+            )
+            ->all();
 
         if (!empty($tasks)) {
-            foreach ($tasks as $task) {
+            /* Получаем id задачь, которые нужно удалить */
+            $prepareIds = array_map(
+                function ($value) {
+                    return $value->id;
+                },
+                $tasks
+            );
 
-                $task->delete();
-
-            }
+            /* Массово удаляем задачи */
+            QmTasks::getDb()
+                ->createCommand(
+                    'DELETE FROM ' . QmTasks::tableName() . ' WHERE id IN (' . implode(',', $prepareIds) . ')'
+                )
+                ->execute();
         }
     }
 
