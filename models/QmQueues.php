@@ -5,24 +5,28 @@ namespace queue\models;
 use Yii;
 use queue\QueueManager;
 use queue\components\CommonRecord;
+use yii\helpers\ArrayHelper;
 
 /**
  * This is the model class for table "{{%qm_queues}}".
  *
- * @property integer $id
- * @property string $tag
- * @property string $name
- * @property string $description
- * @property string $scheduler
- * @property string $options
+ * @property integer   $id
+ * @property string    $tag
+ * @property string    $name
+ * @property string    $description
+ * @property string    $scheduler
+ * @property string    $options
  *
  * @property QmTasks[] $qmTasks
  */
 class QmQueues extends CommonRecord
 {
     private static $_queues;
+
     /**
-     * @inheritdoc
+     * {@inheritdoc}
+     *
+     * @return string
      */
     public static function tableName()
     {
@@ -30,7 +34,9 @@ class QmQueues extends CommonRecord
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
+     *
+     * @return array
      */
     public function rules()
     {
@@ -48,7 +54,9 @@ class QmQueues extends CommonRecord
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
+     *
+     * @return array
      */
     public function attributeLabels()
     {
@@ -65,29 +73,36 @@ class QmQueues extends CommonRecord
     }
 
     /**
-     * @inherit
+     * {@inherit}
+     *
+     * @return array
      */
     public function behaviors()
     {
         return [
-            'access'=>[
+            'access' => [
                 'class' => QueueManager::getInstance()->accessClass,
             ],
         ];
     }
 
     /**
-     * @return \yii\db\ActiveQuery
+     * Поиск очередей
+     *
+     * @return QmQueues[]
      */
     public static function findQueues()
     {
-        if(!static::$_queues) {
+        if (!static::$_queues) {
             static::$_queues = static::find()->indexBy('tag')->all();
         }
+
         return static::$_queues;
     }
 
     /**
+     * Получаем задачи для текущей очереди
+     *
      * @return \yii\db\ActiveQuery
      */
     public function getQmTasks()
@@ -96,15 +111,17 @@ class QmQueues extends CommonRecord
     }
 
     /**
-     * @return \yii\db\ActiveQuery
+     * Получаем задачи TODO надо подобрать описание
+     *
+     * @return QmTasks[]
      */
     public function getQmScheduledTasks()
     {
         $now = (new \DateTime())->format('Y-m-d H:i:sP');
 
         return $this->getQmTasks()
-            ->where(['or',['<','[[time_start]]',$now],['[[time_start]]' => NULL]])
-            ->orderBy(['[[priority]]' => SORT_ASC,'[[id]]' => SORT_ASC])
+            ->where(['or', ['<', '[[time_start]]', $now], ['[[time_start]]' => null]])
+            ->orderBy(['[[priority]]' => SORT_ASC, '[[id]]' => SORT_ASC])
             ->limit($this->tasks_per_shot)
             ->all();
     }
@@ -112,32 +129,40 @@ class QmQueues extends CommonRecord
     /**
      * Add new task into the queue
      *
-     * @param string|array $route Route to call for task
-     * @param array $params Parameters to send to the route
-     * @param array $extra Extra parameters for the task
+     * @param string|array $route  Route to call for task
+     * @param array        $params Parameters to send to the route
+     * @param array        $extra  Extra parameters for the task
      *
      * @return boolean Is the request successfully preformed
      */
-    public function add($route,$params = [],$extra = [])
+    public function add($route, $params = [], $extra = [])
     {
-        $task = new QmTasks(['route' => $route, 'params' => $params, 'queue_id' => $this->id] + $extra);
-        return $task->save() ? $task->id : NULL;
+        $prepareTask = array_merge(
+            [
+                'route' => $route,
+                'params' => $params,
+                'queue_id' => $this->id
+            ],
+            $extra
+        );
+        $task = new QmTasks($prepareTask);
+
+        return $task->save() ? $task->id : null;
     }
 
     /**
-     * Add new task into the queue
+     * Выполняем задачи.
      *
-     * @param string|array $route Route to call for task
-     * @param array $params Parameters to send to the route
+     * @return void
      *
-     * @return boolean Is the request successfully preformed
+     * @throws \Exception
      */
     public function handleShot()
     {
         $tasks = $this->getQmScheduledTasks();
-        
-        foreach($tasks as $task) {
-            if($task->handle()) {
+
+        foreach ($tasks as $task) {
+            if ($task->handle()) {
                 $task->delete();
             }
         }
