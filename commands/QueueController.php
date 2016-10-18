@@ -94,7 +94,7 @@ class QueueController extends Controller
      */
     public function actionHandle($queueId = null)
     {
-        if (is_null($queueId)) {
+        if ($queueId === null) {
             // Check if the instance of current command has been already started and alive
             if ($this->isLocked()) {
                 return;
@@ -131,7 +131,7 @@ class QueueController extends Controller
                 $queue->pid = posix_getpid();
                 if ($queue->save()) {
                     /* Устанавливаем альтернативное количество обрабатываемых строк за "выстрел" */
-                    if (!is_null($this->taskPerShoot)) {
+                    if ($this->taskPerShoot !== null) {
                         $queue->tasks_per_shot = $this->taskPerShoot;
                     }
 
