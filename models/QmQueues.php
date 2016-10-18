@@ -24,6 +24,13 @@ class QmQueues extends CommonRecord
     private static $_queues;
 
     /**
+     * Оффсет
+     *
+     * @var null|int
+     */
+    public $offset = null;
+
+    /**
      * {@inheritdoc}
      *
      * @return string
@@ -119,11 +126,16 @@ class QmQueues extends CommonRecord
     {
         $now = (new \DateTime())->format('Y-m-d H:i:sP');
 
-        return $this->getQmTasks()
+        $query = $this->getQmTasks()
             ->where(['or', ['<', '[[time_start]]', $now], ['[[time_start]]' => null]])
             ->orderBy(['[[priority]]' => SORT_ASC, '[[id]]' => SORT_ASC])
-            ->limit($this->tasks_per_shot)
-            ->all();
+            ->limit($this->tasks_per_shot);
+
+        if ($this->offset !== null) {
+            $query->offset($this->offset);
+        }
+
+        return $query->all();
     }
 
     /**

@@ -20,9 +20,23 @@ class QueueController extends Controller
     /**
      * Количество обрабатываемых запросов
      *
-     * @var int
+     * @var int|null
      */
     public $taskPerShoot = null;
+
+    /**
+     * Оффсет
+     *
+     * @var int|null
+     */
+    public $offset = null;
+
+    /**
+     * Время между выполнениями
+     *
+     * @var int
+     */
+    public $sleep = 5;
 
     /**
      * Консольные опции
@@ -33,7 +47,7 @@ class QueueController extends Controller
      */
     public function options($actionID)
     {
-        return ArrayHelper::merge(parent::options($actionID), ['taskPerShoot']);
+        return ArrayHelper::merge(parent::options($actionID), ['taskPerShoot', 'offset', 'sleep']);
     }
 
     /**
@@ -112,11 +126,23 @@ class QueueController extends Controller
                             $command = Yii::$app->request->scriptFile . ' queue/queue/handle';
                         }
 
-                        shell_exec('nice -n 19 ' . $command . ' ' . (string)$queue->id . ' 2>&1 &');
+                        $prepare = 'nice -n 19 ' . $command . ' ' . (string)$queue->id;
+
+                        /* Задачь за 1 выполнеие */
+                        if ($this->taskPerShoot !== null) {
+                            $prepare .= ' --taskPerShoot=' . $this->taskPerShoot;
+                        }
+
+                        /* Отступ */
+                        if ($this->offset !== null) {
+                            $prepare .= ' --offset=' . $this->offset;
+                        }
+
+                        shell_exec($prepare . ' 2>&1 &');
                     }
                 }
 
-                sleep(5);
+                sleep($this->sleep);
 
             } while ($this->isLockAlive());
 
@@ -133,6 +159,10 @@ class QueueController extends Controller
                     /* Устанавливаем альтернативное количество обрабатываемых строк за "выстрел" */
                     if ($this->taskPerShoot !== null) {
                         $queue->tasks_per_shot = $this->taskPerShoot;
+                    }
+
+                    if ($this->offset !== null) {
+                        $queue->offset = $this->offset;
                     }
 
                     $queue->handleShot();
