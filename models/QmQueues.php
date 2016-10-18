@@ -153,8 +153,8 @@ class QmQueues extends CommonRecord
     /**
      * Check for task exists
      *
-     * @param string $route Route to call for task
-     * @param array $params Parameters to send to the route
+     * @param string $route  Route to call for task
+     * @param array  $params Parameters to send to the route
      *
      * @return boolean Check result
      */
@@ -171,8 +171,10 @@ class QmQueues extends CommonRecord
     /**
      * Delete tasks with certain route and params
      *
-     * @param string $route Route to call for task
-     * @param array $params Parameters to send to the route
+     * @param string $route  Route to call for task
+     * @param array  $params Parameters to send to the route
+     *
+     * @return void
      */
     public function deleteTask($route, $params)
     {
@@ -183,8 +185,8 @@ class QmQueues extends CommonRecord
             ['queue_id' => $this->id]
         ])->all();
 
-        if(!empty($tasks)) {
-            foreach($tasks as $task) {
+        if (!empty($tasks)) {
+            foreach ($tasks as $task) {
 
                 $task->delete();
 
