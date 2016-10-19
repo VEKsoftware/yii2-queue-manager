@@ -29,7 +29,7 @@ class QueueController extends Controller
      *
      * @var int|null
      */
-    public $offset = null;
+    public $offset = 0;
 
     /**
      * Время между выполнениями
@@ -98,6 +98,60 @@ class QueueController extends Controller
     }
 
     /**
+     * Получаем id процесса из lock файла
+     *
+     * @param string $tag    - тэг очереди
+     * @param string $offset - отступ очереди
+     *
+     * @return null|string
+     *
+     * @throws \yii\base\InvalidParamException
+     */
+    protected function getPidFromLock(string $tag, string $offset)
+    {
+        $lockingPID = null;
+
+        $name = 'queue-' . $tag . '-' . $offset . '.lock';
+
+        $lockFile = Yii::getAlias('@runtime/' . $name);
+
+        if (file_exists($lockFile)) {
+            $lockingPID = trim(file_get_contents($lockFile));
+
+            /* null иожет быть записан как текст */
+            if ($lockingPID === '') {
+                $lockingPID = null;
+            }
+        }
+
+        return $lockingPID;
+    }
+
+    /**
+     * Записываем id процесса в лок файл
+     *
+     * @param string $tag    - тэг очереди
+     * @param string $offset - отступ очереди
+     * @param int    $pid    - id процесса
+     *
+     * @return bool
+     *
+     * @throws \yii\base\InvalidParamException
+     */
+    protected function setPidFromLock(string $tag, string $offset, int $pid = null)
+    {
+        $name = 'queue-' . $tag . '-' . $offset . '.lock';
+
+        $lockFile = Yii::getAlias('@runtime/' . $name);
+
+        if (file_exists($lockFile)) {
+            unlink($lockFile);
+        }
+
+        return (bool)file_put_contents($lockFile, $pid . "\n");
+    }
+
+    /**
      * Handler for all queued events
      *
      * @param null|integer $queueId - id "очереди"
@@ -119,7 +173,9 @@ class QueueController extends Controller
             do {
                 $queues = QmQueues::findQueues();
                 foreach ($queues as $queue) {
-                    if ($queue->pid === null || !posix_kill($queue->pid, 0)) {
+                    $queuePid = $this->getPidFromLock($queue->tag, $this->offset);
+
+                    if ($queuePid === null || !posix_kill($queuePid, 0)) {
                         if ($queue->scheduler && file_exists(Yii::getAlias($queue->scheduler))) {
                             $command = Yii::getAlias($queue->scheduler) . ' queue/queue/handle';
                         } else {
@@ -134,7 +190,7 @@ class QueueController extends Controller
                         }
 
                         /* Отступ */
-                        if ($this->offset !== null) {
+                        if ($this->offset !== 0) {
                             $prepare .= ' --offset=' . $this->offset;
                         }
 
@@ -153,22 +209,25 @@ class QueueController extends Controller
                 return false;
             }
 
-            if ($queue->pid === null || !posix_kill($queue->pid, 0)) {
-                $queue->pid = posix_getpid();
-                if ($queue->save()) {
+            $queuePid = $this->getPidFromLock($queue->tag, $this->offset);
+
+            if ($queuePid === null || !posix_kill($queuePid, 0)) {
+                $queuePid = getmypid();
+
+                if ($this->setPidFromLock($queue->tag, $this->offset, $queuePid)) {
                     /* Устанавливаем альтернативное количество обрабатываемых строк за "выстрел" */
                     if ($this->taskPerShoot !== null) {
                         $queue->tasks_per_shot = $this->taskPerShoot;
                     }
 
-                    if ($this->offset !== null) {
+                    if ($this->offset !== 0) {
                         $queue->offset = $this->offset;
                     }
 
                     $queue->handleShot();
 
-                    $queue->pid = null;
-                    $queue->save();
+                    $queuePid = null;
+                    $this->setPidFromLock($queue->tag, $this->offset, $queuePid);
                 }
             }
         }
