@@ -5,24 +5,36 @@ namespace queue\models;
 use Yii;
 use queue\QueueManager;
 use queue\components\CommonRecord;
+use yii\db\Transaction;
+use yii\helpers\ArrayHelper;
 
 /**
  * This is the model class for table "{{%qm_queues}}".
  *
- * @property integer $id
- * @property string $tag
- * @property string $name
- * @property string $description
- * @property string $scheduler
- * @property string $options
+ * @property integer   $id
+ * @property string    $tag
+ * @property string    $name
+ * @property string    $description
+ * @property string    $scheduler
+ * @property string    $options
  *
  * @property QmTasks[] $qmTasks
  */
 class QmQueues extends CommonRecord
 {
     private static $_queues;
+
     /**
-     * @inheritdoc
+     * Оффсет
+     *
+     * @var null|int
+     */
+    public $offset = null;
+
+    /**
+     * {@inheritdoc}
+     *
+     * @return string
      */
     public static function tableName()
     {
@@ -30,7 +42,9 @@ class QmQueues extends CommonRecord
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
+     *
+     * @return array
      */
     public function rules()
     {
@@ -48,7 +62,9 @@ class QmQueues extends CommonRecord
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
+     *
+     * @return array
      */
     public function attributeLabels()
     {
@@ -65,29 +81,36 @@ class QmQueues extends CommonRecord
     }
 
     /**
-     * @inherit
+     * {@inherit}
+     *
+     * @return array
      */
     public function behaviors()
     {
         return [
-            'access'=>[
+            'access' => [
                 'class' => QueueManager::getInstance()->accessClass,
             ],
         ];
     }
 
     /**
-     * @return \yii\db\ActiveQuery
+     * Поиск очередей
+     *
+     * @return QmQueues[]
      */
     public static function findQueues()
     {
-        if(!static::$_queues) {
+        if (!static::$_queues) {
             static::$_queues = static::find()->indexBy('tag')->all();
         }
+
         return static::$_queues;
     }
 
     /**
+     * Получаем задачи для текущей очереди
+     *
      * @return \yii\db\ActiveQuery
      */
     public function getQmTasks()
@@ -96,39 +119,55 @@ class QmQueues extends CommonRecord
     }
 
     /**
-     * @return \yii\db\ActiveQuery
+     * Получаем задачи TODO надо подобрать описание
+     *
+     * @return QmTasks[]
      */
     public function getQmScheduledTasks()
     {
         $now = (new \DateTime())->format('Y-m-d H:i:sP');
 
-        return $this->getQmTasks()
-            ->where(['or',['<','[[time_start]]',$now],['[[time_start]]' => NULL]])
-            ->orderBy(['[[priority]]' => SORT_ASC,'[[id]]' => SORT_ASC])
-            ->limit($this->tasks_per_shot)
-            ->all();
+        $query = $this->getQmTasks()
+            ->where(['or', ['<', '[[time_start]]', $now], ['[[time_start]]' => null]])
+            ->orderBy(['[[priority]]' => SORT_ASC, '[[id]]' => SORT_ASC])
+            ->limit($this->tasks_per_shot);
+
+        if ($this->offset !== null) {
+            $query->offset($this->offset);
+        }
+
+        return $query->all();
     }
 
     /**
      * Add new task into the queue
      *
-     * @param string|array $route Route to call for task
-     * @param array $params Parameters to send to the route
-     * @param array $extra Extra parameters for the task
+     * @param string|array $route  Route to call for task
+     * @param array        $params Parameters to send to the route
+     * @param array        $extra  Extra parameters for the task
      *
      * @return boolean Is the request successfully preformed
      */
-    public function add($route,$params = [],$extra = [])
+    public function add($route, $params = [], $extra = [])
     {
-        $task = new QmTasks(['route' => $route, 'params' => $params, 'queue_id' => $this->id] + $extra);
-        return $task->save() ? $task->id : NULL;
+        $prepareTask = array_merge(
+            [
+                'route' => $route,
+                'params' => $params,
+                'queue_id' => $this->id
+            ],
+            $extra
+        );
+        $task = new QmTasks($prepareTask);
+
+        return $task->save() ? $task->id : null;
     }
 
     /**
      * Check for task exists
      *
-     * @param string $route Route to call for task
-     * @param array $params Parameters to send to the route
+     * @param string $route  Route to call for task
+     * @param array  $params Parameters to send to the route
      *
      * @return boolean Check result
      */
@@ -145,43 +184,107 @@ class QmQueues extends CommonRecord
     /**
      * Delete tasks with certain route and params
      *
-     * @param string $route Route to call for task
-     * @param array $params Parameters to send to the route
+     * @param string $route  Route to call for task
+     * @param array  $params Parameters to send to the route
+     *
+     * @return void
+     *
+     * @throws \yii\db\Exception
      */
     public function deleteTask($route, $params)
     {
-        $tasks = $this->getQmTasks()->where([
-            'and',
-            ['route' => $route],
-            ['params' => serialize($params)],
-            ['queue_id' => $this->id]
-        ])->all();
+        /* Получаем задачи */
+        $tasks = $this->getQmTasks()
+            ->where(
+                [
+                    'and',
+                    ['route' => $route],
+                    ['params' => serialize($params)],
+                    ['queue_id' => $this->id]
+                ]
+            )
+            ->all();
 
-        if(!empty($tasks)) {
-            foreach($tasks as $task) {
+        if (!empty($tasks)) {
+            /* Получаем id задачь, которые нужно удалить */
+            $prepareIds = array_map(
+                function ($value) {
+                    return $value->id;
+                },
+                $tasks
+            );
 
+            $transaction = static::getDb()->beginTransaction();
+            $this->blockTasks($prepareIds);
+
+            /* Массово удаляем задачи */
+            QmTasks::getDb()
+                ->createCommand(
+                    'DELETE FROM ' . QmTasks::tableName() . ' WHERE id IN (' . implode(',', $prepareIds) . ')'
+                )
+                ->execute();
+
+            $transaction->commit();
+        }
+    }
+
+    /**
+     * Выполняем задачи.
+     *
+     * @return void
+     *
+     * @throws \Exception
+     */
+    public function handleShot()
+    {
+        $tasks = $this->getQmScheduledTasks();
+
+        foreach ($tasks as $task) {
+            /* @var $transaction Transaction */
+            $transaction = static::getDb()->beginTransaction();
+            $this->blockTask($task->id);
+
+            if ($task->handle()) {
                 $task->delete();
-
+                $transaction->commit();
+            } else {
+                $transaction->rollBack();
             }
         }
     }
 
     /**
-     * Add new task into the queue
+     * Блокируем задачу
      *
-     * @param string|array $route Route to call for task
-     * @param array $params Parameters to send to the route
+     * @param integer $taskId - id задачи
      *
-     * @return boolean Is the request successfully preformed
+     * @return void
+     *
+     * @throws \yii\db\Exception
      */
-    public function handleShot()
+    protected function blockTask($taskId)
     {
-        $tasks = $this->getQmScheduledTasks();
-        
-        foreach($tasks as $task) {
-            if($task->handle()) {
-                $task->delete();
-            }
-        }
+        static::getDb()
+            ->createCommand(
+                'SELECT 1 FROM qm_tasks WHERE id = :idtask FOR UPDATE',
+                [':idtask' => $taskId]
+            )
+            ->execute();
+    }
+
+    /**
+     * Блокируем задачи
+     *
+     * @param array $prepareIds - массив, содержащий id задач
+     *
+     * @return void
+     *
+     * @throws \yii\db\Exception
+     */
+    protected function blockTasks(array $prepareIds)
+    {
+        static::getDb()
+            ->createCommand('SELECT 1 FROM qm_tasks WHERE id  IN (' . implode(',', $prepareIds) . ')  FOR UPDATE')
+            ->execute();
     }
 }
