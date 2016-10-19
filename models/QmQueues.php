@@ -5,6 +5,7 @@ namespace queue\models;
 use Yii;
 use queue\QueueManager;
 use queue\components\CommonRecord;
+use yii\db\Transaction;
 use yii\helpers\ArrayHelper;
 
 /**
@@ -213,12 +214,17 @@ class QmQueues extends CommonRecord
                 $tasks
             );
 
+            $transaction = static::getDb()->beginTransaction();
+            $this->blockTasks($prepareIds);
+
             /* Массово удаляем задачи */
             QmTasks::getDb()
                 ->createCommand(
                     'DELETE FROM ' . QmTasks::tableName() . ' WHERE id IN (' . implode(',', $prepareIds) . ')'
                 )
                 ->execute();
+
+            $transaction->commit();
         }
     }
 
@@ -234,9 +240,51 @@ class QmQueues extends CommonRecord
         $tasks = $this->getQmScheduledTasks();
 
         foreach ($tasks as $task) {
+            /* @var $transaction Transaction */
+            $transaction = static::getDb()->beginTransaction();
+            $this->blockTask($task->id);
+
             if ($task->handle()) {
                 $task->delete();
+                $transaction->commit();
+            } else {
+                $transaction->rollBack();
             }
         }
+    }
+
+    /**
+     * Блокируем задачу
+     *
+     * @param integer $taskId - id задачи
+     *
+     * @return void
+     *
+     * @throws \yii\db\Exception
+     */
+    protected function blockTask($taskId)
+    {
+        static::getDb()
+            ->createCommand(
+                'SELECT 1 FROM qm_tasks WHERE id = :idtask FOR UPDATE',
+                [':idtask' => $taskId]
+            )
+            ->execute();
+    }
+
+    /**
+     * Блокируем задачи
+     *
+     * @param array $prepareIds - массив, содержащий id задач
+     *
+     * @return void
+     *
+     * @throws \yii\db\Exception
+     */
+    protected function blockTasks(array $prepareIds)
+    {
+        static::getDb()
+            ->createCommand('SELECT 1 FROM qm_tasks WHERE id  IN (' . implode(',', $prepareIds) . ')  FOR UPDATE')
+            ->execute();
     }
 }

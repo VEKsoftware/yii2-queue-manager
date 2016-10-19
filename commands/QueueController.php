@@ -224,10 +224,13 @@ class QueueController extends Controller
                         $queue->offset = $this->offset;
                     }
 
-                    $queue->handleShot();
+                    try {
+                        $queue->handleShot();
 
-                    $queuePid = null;
-                    $this->setPidFromLock($queue->tag, $this->offset, $queuePid);
+                        $this->setPidFromLock($queue->tag, $this->offset, null);
+                    } catch (\Exception $e) {
+                        $this->setPidFromLock($queue->tag, $this->offset, null);
+                    }
                 }
             }
         }
