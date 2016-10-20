@@ -111,7 +111,7 @@ class QueueController extends Controller
     {
         $lockingPID = null;
 
-        $name = 'queue-' . $tag . '-' . $offset . '.lock';
+        $name = $this->nameLockFile($tag, $offset);
 
         $lockFile = Yii::getAlias('@runtime/' . $name);
 
@@ -140,7 +140,7 @@ class QueueController extends Controller
      */
     protected function setPidFromLock(string $tag, string $offset, int $pid = null)
     {
-        $name = 'queue-' . $tag . '-' . $offset . '.lock';
+        $name = $this->nameLockFile($tag, $offset);
 
         $lockFile = Yii::getAlias('@runtime/' . $name);
 
@@ -236,6 +236,19 @@ class QueueController extends Controller
         }
 
         return true;
+    }
+
+    /**
+     * Имя lock файла для очереди
+     *
+     * @param string $tag    - тэг очереди
+     * @param string $offset - отступ очереди
+     *
+     * @return string
+     */
+    protected function nameLockFile(string $tag, string $offset)
+    {
+        return 'queue-' . $tag . '-' . $offset . '.lock';
     }
 
     /**
