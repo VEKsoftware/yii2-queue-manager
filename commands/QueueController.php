@@ -162,6 +162,9 @@ class QueueController extends Controller
      */
     public function actionHandle($queueId = null)
     {
+        /* Время начала работы скрипта */
+        $start = microtime(true);
+
         if ($queueId === null) {
             // Check if the instance of current command has been already started and alive
             if ($this->isLocked()) {
@@ -225,7 +228,11 @@ class QueueController extends Controller
                     }
 
                     try {
-                        $queue->handleShot();
+                        /* Обработка задач пока разница составляет менее 55 секунд (скрипт выполняется 55 секунд) */
+                        while ((microtime(true) - $start) < 50) {
+                            $queue->handleShot();
+                            sleep($this->sleep);
+                        }
 
                         $this->setPidFromLock($queue->tag, $this->offset, null);
                     } catch (\Exception $e) {
