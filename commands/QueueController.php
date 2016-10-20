@@ -229,7 +229,7 @@ class QueueController extends Controller
 
                     try {
                         /* Обработка задач пока разница составляет менее 55 секунд (скрипт выполняется 55 секунд) */
-                        while ((microtime(true) - $start) < 50) {
+                        while ((microtime(true) - $start) < 55) {
                             $queue->handleShot();
                             sleep($this->sleep);
                         }
