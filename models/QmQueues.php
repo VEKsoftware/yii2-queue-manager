@@ -284,7 +284,7 @@ class QmQueues extends CommonRecord
     protected function blockTasks(array $prepareIds)
     {
         static::getDb()
-            ->createCommand('SELECT 1 FROM qm_tasks WHERE id  IN (' . implode(',', $prepareIds) . ')  FOR UPDATE')
+            ->createCommand('SELECT 1 FROM qm_tasks WHERE id  IN (' . implode(',', $prepareIds) . ')  FOR UPDATE NOWAIT')
             ->execute();
     }
 }
