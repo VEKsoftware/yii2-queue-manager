@@ -215,16 +215,20 @@ class QmQueues extends CommonRecord
             );
 
             $transaction = static::getDb()->beginTransaction();
-            $this->blockTasks($prepareIds);
+            $needDelete = $this->blockTasks($prepareIds);
 
-            /* Массово удаляем задачи */
-            QmTasks::getDb()
-                ->createCommand(
-                    'DELETE FROM ' . QmTasks::tableName() . ' WHERE id IN (' . implode(',', $prepareIds) . ')'
-                )
-                ->execute();
+            if ($needDelete === true) {
+                /* Массово удаляем задачи */
+                QmTasks::getDb()
+                    ->createCommand(
+                        'DELETE FROM ' . QmTasks::tableName() . ' WHERE id IN (' . implode(',', $prepareIds) . ')'
+                    )
+                    ->execute();
 
-            $transaction->commit();
+                $transaction->commit();
+            }
+
+            $transaction->rollBack();
         }
     }
 
@@ -277,14 +281,22 @@ class QmQueues extends CommonRecord
      *
      * @param array $prepareIds - массив, содержащий id задач
      *
-     * @return void
+     * @return bool
      *
      * @throws \yii\db\Exception
      */
     protected function blockTasks(array $prepareIds)
     {
-        static::getDb()
-            ->createCommand('SELECT 1 FROM qm_tasks WHERE id  IN (' . implode(',', $prepareIds) . ')  FOR UPDATE NOWAIT')
-            ->execute();
+        try {
+            static::getDb()
+                ->createCommand('SELECT 1 FROM qm_tasks WHERE id  IN (' . implode(',', $prepareIds) . ')  FOR UPDATE NOWAIT')
+                ->execute();
+
+            $doIt = true;
+        } catch (\Exception $e) {
+            $doIt = false;
+        }
+
+        return $doIt;
     }
 }
